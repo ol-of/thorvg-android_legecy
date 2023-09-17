@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.thorvg.androidlib"
+    namespace = "com.thorvg.android"
     compileSdk = 33
 
     defaultConfig {
