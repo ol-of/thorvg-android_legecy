@@ -9,7 +9,8 @@ import com.thorvg.android.graphics.drawable.LottieDrawable;
 
 public class LottieView extends View {
     private LottieDrawable mLottieDrawable;
-    private String mJsonFilePath = null;
+    private String mFilePath = null;
+    private boolean mReady;
 
     public LottieView(Context context) {
         super(context);
@@ -27,15 +28,30 @@ public class LottieView extends View {
         super(context, attrs, defStyleAttr, defStyleRes);
     }
 
-    public void setJsonFilePath(String jsonFilePath) {
-        mJsonFilePath = jsonFilePath;
+    public void setFilePath(String filePath) {
+        if (filePath == null || filePath.isEmpty() || filePath.equals(mFilePath)) {
+            return;
+        }
+        mFilePath = filePath;
+        mReady = true;
     }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-        if (mJsonFilePath != null) {
-            mLottieDrawable = new LottieDrawable(getContext(), mJsonFilePath, getMeasuredWidth(), getMeasuredHeight());
+
+        if (mReady) {
+            mLottieDrawable = new LottieDrawable(getContext(), mFilePath, getMeasuredWidth(), getMeasuredHeight());
+            mReady = false;
+        }
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        if (mLottieDrawable != null) {
+            mLottieDrawable.release();
+            mLottieDrawable = null;
         }
     }
 

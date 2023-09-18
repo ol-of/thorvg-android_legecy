@@ -12,6 +12,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         LottieView lottieView = findViewById(R.id.lottieView);
-        lottieView.setJsonFilePath("swinging.json");
+        lottieView.setFilePath("swinging.json");
     }
 }

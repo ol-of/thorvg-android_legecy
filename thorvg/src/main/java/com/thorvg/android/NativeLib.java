@@ -7,6 +7,9 @@ public class NativeLib {
         System.loadLibrary("thorvg-android");
     }
 
-    public static native void nRenderLottie(String jsonContent, int contentSize, Bitmap bitmap,
-            float width, float height);
+    public static native long nCreateLottie(Bitmap bitmap, String contentString, int length, float width, float height);
+
+    public static native void nDrawLottie(long lottiePtr);
+
+    public static native void nDestroyLottie(long lottiePtr);
 }
