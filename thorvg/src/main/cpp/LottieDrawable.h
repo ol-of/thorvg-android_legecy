@@ -9,20 +9,19 @@ namespace LottieDrawable {
 
     class Data {
     public:
-        Data(const Data& data);
         Data(const char* content, uint32_t strLength, float width, float height);
-        Data() {}
+        ~Data() {
+            tvg::Initializer::term(tvg::CanvasEngine::Sw);
+        }
         void init(uint32_t* buffer);
-        void draw();
+        void draw(uint32_t frame);
     private:
-        const char* content;
-        uint32_t strLength;
-        uint32_t* buffer;
-        float width;
-        float height;
-        bool initialized;
-        std::unique_ptr<tvg::SwCanvas> canvas;
-        std::unique_ptr<tvg::Animation> animation;
+        const char* mContent;
+        uint32_t mContentLength;
+        float mWidth;
+        float mHeight;
+        std::unique_ptr<tvg::SwCanvas> mCanvas;
+        std::unique_ptr<tvg::Animation> mAnimation;
     };
 
 } // namespace VectorDrawable

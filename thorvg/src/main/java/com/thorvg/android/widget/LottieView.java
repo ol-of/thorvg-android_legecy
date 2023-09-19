@@ -2,8 +2,11 @@ package com.thorvg.android.widget;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 import android.view.View;
+
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.thorvg.android.graphics.drawable.LottieDrawable;
 
@@ -42,6 +45,7 @@ public class LottieView extends View {
 
         if (mReady) {
             mLottieDrawable = new LottieDrawable(getContext(), mFilePath, getMeasuredWidth(), getMeasuredHeight());
+            mLottieDrawable.setCallback(this);
             mReady = false;
         }
     }
@@ -65,5 +69,11 @@ public class LottieView extends View {
         }
 
         lottieDrawable.draw(canvas);
+    }
+
+    @Override
+    public void invalidateDrawable(@NonNull Drawable drawable) {
+        super.invalidateDrawable(drawable);
+        invalidate();
     }
 }
