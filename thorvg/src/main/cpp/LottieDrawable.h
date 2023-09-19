@@ -16,12 +16,12 @@ namespace LottieDrawable {
         void init(uint32_t* buffer);
         void draw(uint32_t frame);
     private:
+        std::unique_ptr<tvg::SwCanvas> mCanvas;
+        std::unique_ptr<tvg::Animation> mAnimation;
         const char* mContent;
         uint32_t mContentLength;
         float mWidth;
         float mHeight;
-        std::unique_ptr<tvg::SwCanvas> mCanvas;
-        std::unique_ptr<tvg::Animation> mAnimation;
     };
 
 } // namespace VectorDrawable

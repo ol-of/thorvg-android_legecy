@@ -17,7 +17,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
-public class LottieDrawable extends Drawable implements Drawable.Callback, Animatable {
+public class LottieDrawable extends Drawable implements Animatable {
     private static final String LOGTAG = LottieDrawable.class.getSimpleName();
 
     private final AssetManager mAssetManager;
@@ -44,6 +44,7 @@ public class LottieDrawable extends Drawable implements Drawable.Callback, Anima
         String contentString = loadJSONFromAsset(filePath);
         mNativePtr = NativeLib.nCreateLottie(contentString, contentString.length(),
                 mWidth, mHeight);
+        mStartFrame = 0;
         mEndFrame = 60;
         mFramesPerUpdates = mShouldLimitFps ? 2 : 1;
     }
@@ -101,18 +102,6 @@ public class LottieDrawable extends Drawable implements Drawable.Callback, Anima
         // We can't tell whether the drawable is fully opaque unless we examine all the pixels,
         // but we could tell it is transparent if the root alpha is 0.
         return getAlpha() == 0 ? PixelFormat.TRANSPARENT : PixelFormat.TRANSLUCENT;
-    }
-
-    @Override
-    public void invalidateDrawable(@NonNull Drawable who) {
-    }
-
-    @Override
-    public void scheduleDrawable(@NonNull Drawable who, @NonNull Runnable what, long when) {
-    }
-
-    @Override
-    public void unscheduleDrawable(@NonNull Drawable who, @NonNull Runnable what) {
     }
 
     private String loadJSONFromAsset(String fileName) {

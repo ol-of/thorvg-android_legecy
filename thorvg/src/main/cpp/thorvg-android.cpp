@@ -23,11 +23,11 @@ Java_com_thorvg_android_NativeLib_nDrawLottieFrame(JNIEnv *env, jclass clazz, jl
     }
     void *buffer;
     if (AndroidBitmap_lockPixels(env, bitmap, &buffer) >= 0) {
+        auto* data = reinterpret_cast<LottieDrawable::Data*>(lottiePtr);
+        data->init((uint32_t *) buffer);
+        data->draw(frame);
         AndroidBitmap_unlockPixels(env, bitmap);
     }
-    auto* data = reinterpret_cast<LottieDrawable::Data*>(lottiePtr);
-    data->init((uint32_t *) buffer);
-    data->draw(frame);
 }
 
 extern "C"

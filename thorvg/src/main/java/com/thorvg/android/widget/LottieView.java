@@ -13,7 +13,6 @@ import com.thorvg.android.graphics.drawable.LottieDrawable;
 public class LottieView extends View {
     private LottieDrawable mLottieDrawable;
     private String mFilePath = null;
-    private boolean mReady;
 
     public LottieView(Context context) {
         super(context);
@@ -36,17 +35,15 @@ public class LottieView extends View {
             return;
         }
         mFilePath = filePath;
-        mReady = true;
     }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
 
-        if (mReady) {
+        if (mLottieDrawable == null && mFilePath != null && !mFilePath.isEmpty()) {
             mLottieDrawable = new LottieDrawable(getContext(), mFilePath, getMeasuredWidth(), getMeasuredHeight());
             mLottieDrawable.setCallback(this);
-            mReady = false;
         }
     }
 
