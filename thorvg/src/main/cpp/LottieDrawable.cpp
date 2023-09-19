@@ -8,15 +8,22 @@ LottieDrawable::Data::Data(const LottieDrawable::Data &data) {
     strLength = data.strLength;
     width = data.width;
     height = data.height;
+    initialized = false;
 }
 
-LottieDrawable::Data::Data(uint32_t * buffer, const char *content, uint32_t length, float width,
-        float height) {
-    this->buffer = buffer;
+LottieDrawable::Data::Data(const char *content, uint32_t length, float width, float height) {
     this->content = content;
     this->strLength = length;
     this->width = width;
     this->height = height;
+    initialized = false;
+}
+
+void LottieDrawable::Data::init(uint32_t *buffer) {
+    if (initialized) {
+        initialized = true;
+        return;
+    }
 
     auto threads = std::thread::hardware_concurrency();
     if (threads > 0) --threads;
@@ -25,11 +32,9 @@ LottieDrawable::Data::Data(uint32_t * buffer, const char *content, uint32_t leng
         // Create a canvas
         canvas = tvg::SwCanvas::gen();
         canvas->target(buffer, (uint32_t) width, (uint32_t) width, (uint32_t) height,
-                tvg::SwCanvas::ABGR8888);
-
+                       tvg::SwCanvas::ABGR8888);
         // Generate an animation
         animation = tvg::Animation::gen();
-
         // Acquire a picture which associated with the animation.
         auto picture = animation->picture();
         if (picture->load(content, strLength, "", false) != tvg::Result::Success) {
@@ -37,7 +42,6 @@ LottieDrawable::Data::Data(uint32_t * buffer, const char *content, uint32_t leng
             return;
         }
         picture->size(width, height);
-
         canvas->push(tvg::cast<tvg::Picture>(picture));
 
         tvg::Initializer::term(tvg::CanvasEngine::Sw);

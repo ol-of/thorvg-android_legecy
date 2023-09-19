@@ -10,8 +10,9 @@ namespace LottieDrawable {
     class Data {
     public:
         Data(const Data& data);
-        Data(uint32_t * buffer, const char* content, uint32_t strLength, float width, float height);
+        Data(const char* content, uint32_t strLength, float width, float height);
         Data() {}
+        void init(uint32_t* buffer);
         void draw();
     private:
         const char* content;
@@ -19,6 +20,7 @@ namespace LottieDrawable {
         uint32_t* buffer;
         float width;
         float height;
+        bool initialized;
         std::unique_ptr<tvg::SwCanvas> canvas;
         std::unique_ptr<tvg::Animation> animation;
     };

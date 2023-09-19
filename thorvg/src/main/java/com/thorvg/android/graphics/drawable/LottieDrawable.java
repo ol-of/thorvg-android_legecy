@@ -22,40 +22,102 @@ public class LottieDrawable extends Drawable implements Drawable.Callback, Anima
 
     private final AssetManager mAssetManager;
 
-    private final Bitmap mBitmap;
-    private final long mNativePtr;
+    private long mNativePtr;
+    private int mWidth;
+    private int mHeight;
+
+    private Bitmap mCurrentBuffer;
+    private Bitmap mNextBuffer;
+    private Bitmap mTempBuffer;
+
+    private int mFrame;
+    private int mStartFrame;
+    private int mEndFrame;
+    private int mFramesPerUpdates;
+    private boolean mShouldLimitFps = false;
+
+    private boolean mIsRunning;
+
+    private final Runnable mDrawFrameRunnable = () -> {
+        if (mNativePtr == 0 || mWidth == 0 || mHeight == 0) {
+            return;
+        }
+
+        if (mCurrentBuffer == null) {
+            mCurrentBuffer = Bitmap.createBitmap(mWidth, mHeight, Bitmap.Config.ARGB_8888);
+        }
+
+        NativeLib.nDrawLottieFrame(mNativePtr, mCurrentBuffer, mFrame);
+
+        mTempBuffer = mCurrentBuffer;
+
+        // Increase frame count.
+        mFrame += mFramesPerUpdates;
+        if (mFrame > mEndFrame) {
+            mFrame = mEndFrame;
+        } else if (mFrame < mStartFrame) {
+            mFrame = mStartFrame;
+        }
+    };
 
     public LottieDrawable(Context context, String filePath, int width, int height) {
         mAssetManager = context.getAssets();
-        mBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        mWidth = width;
+        mHeight = height;
         String contentString = loadJSONFromAsset(filePath);
-        mNativePtr = NativeLib.nCreateLottie(mBitmap, contentString, contentString.length(),
-                width, height);
+        mNativePtr = NativeLib.nCreateLottie(contentString, contentString.length(),
+                mWidth, mHeight);
+        mFramesPerUpdates = mShouldLimitFps ? 2 : 1;
     }
 
     public void release() {
         NativeLib.nDestroyLottie(mNativePtr);
+        if (mCurrentBuffer != null) {
+            mCurrentBuffer.recycle();
+            mCurrentBuffer = null;
+        }
+        if (mNextBuffer != null) {
+            mNextBuffer.recycle();
+            mNextBuffer = null;
+        }
+        if (mTempBuffer != null) {
+            mTempBuffer.recycle();
+            mTempBuffer = null;
+        }
     }
 
     @Override
     public void start() {
-
     }
 
     @Override
     public void stop() {
-
     }
 
     @Override
     public boolean isRunning() {
-        return false;
+        return mIsRunning;
+    }
+
+    private void switchBuffer() {
+        mCurrentBuffer = mNextBuffer;
+        mNextBuffer = mTempBuffer;
+        mTempBuffer = null;
     }
 
     @Override
     public void draw(@NonNull Canvas canvas) {
-        NativeLib.nDrawLottie(mNativePtr);
-        canvas.drawBitmap(mBitmap, 0, 0, new Paint());
+        if (mNativePtr == 0) {
+            return;
+        }
+        if (mIsRunning) {
+            switchBuffer();
+        }
+        if (mCurrentBuffer == null) {
+            mCurrentBuffer = Bitmap.createBitmap(mWidth, mHeight, Bitmap.Config.ARGB_8888);
+        }
+        NativeLib.nDrawLottieFrame(mNativePtr, mCurrentBuffer, mFrame);
+        canvas.drawBitmap(mCurrentBuffer, 0, 0, new Paint());
     }
 
     @Override
