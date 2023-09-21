@@ -10,23 +10,23 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.thorvg.android.graphics.drawable.LottieDrawable;
 
-public class LottieView extends View {
+public class LottieAnimationView extends View {
     private LottieDrawable mLottieDrawable;
     private String mFilePath = null;
 
-    public LottieView(Context context) {
+    public LottieAnimationView(Context context) {
         super(context);
     }
 
-    public LottieView(Context context, @Nullable AttributeSet attrs) {
+    public LottieAnimationView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
     }
 
-    public LottieView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
+    public LottieAnimationView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
     }
 
-    public LottieView(Context context, @Nullable AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+    public LottieAnimationView(Context context, @Nullable AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
     }
 
