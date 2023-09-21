@@ -6,17 +6,27 @@ using namespace std;
 
 extern "C"
 JNIEXPORT jlong JNICALL
-Java_com_thorvg_android_NativeLib_nCreateLottie(JNIEnv *env, jclass clazz, jstring contentString,
-        jint length, jfloat width, jfloat height) {
+Java_com_thorvg_android_LottieNative_nCreateLottie(JNIEnv *env, jclass clazz, jobject bitmap,
+        jstring contentString, jint length, jfloat width, jfloat height, jintArray outValues) {
     const char* inputStr = env->GetStringUTFChars(contentString, nullptr);
     auto* newData = new LottieDrawable::Data(inputStr, length, width, height);
     env->ReleaseStringUTFChars(contentString, inputStr);
+    void *buffer;
+    if (AndroidBitmap_lockPixels(env, bitmap, &buffer) >= 0) {
+        newData->init((uint32_t *) buffer);
+        AndroidBitmap_unlockPixels(env, bitmap);
+    }
+    jint* contentInfo = env->GetIntArrayElements(outValues, nullptr);
+    if (contentInfo != nullptr) {
+        contentInfo[0] = (jint) newData->mAnimation->totalFrame();
+        env->ReleaseIntArrayElements(outValues, contentInfo, 0);
+    }
     return reinterpret_cast<jlong>(newData);
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_thorvg_android_NativeLib_nDrawLottieFrame(JNIEnv *env, jclass clazz, jlong lottiePtr,
+Java_com_thorvg_android_LottieNative_nDrawLottieFrame(JNIEnv *env, jclass clazz, jlong lottiePtr,
         jobject bitmap, jint frame) {
     if (lottiePtr == 0) {
         return;
@@ -24,7 +34,6 @@ Java_com_thorvg_android_NativeLib_nDrawLottieFrame(JNIEnv *env, jclass clazz, jl
     void *buffer;
     if (AndroidBitmap_lockPixels(env, bitmap, &buffer) >= 0) {
         auto* data = reinterpret_cast<LottieDrawable::Data*>(lottiePtr);
-        data->init((uint32_t *) buffer);
         data->draw(frame);
         AndroidBitmap_unlockPixels(env, bitmap);
     }
@@ -32,7 +41,7 @@ Java_com_thorvg_android_NativeLib_nDrawLottieFrame(JNIEnv *env, jclass clazz, jl
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_thorvg_android_NativeLib_nDestroyLottie(JNIEnv *env, jclass clazz, jlong lottiePtr) {
+Java_com_thorvg_android_LottieNative_nDestroyLottie(JNIEnv *env, jclass clazz, jlong lottiePtr) {
     if (lottiePtr == 0) {
         return;
     }

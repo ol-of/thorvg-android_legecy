@@ -11,7 +11,7 @@ import android.graphics.drawable.Animatable;
 import android.graphics.drawable.Drawable;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import com.thorvg.android.NativeLib;
+import com.thorvg.android.LottieNative;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,37 +20,36 @@ import java.nio.charset.StandardCharsets;
 public class LottieDrawable extends Drawable implements Animatable {
     private static final String LOGTAG = LottieDrawable.class.getSimpleName();
 
+    private static final int LOTTIE_INFO_FRAME_COUNT = 0;
+    private static final int LOTTIE_INFO_COUNT = 1;
+
+    private static final int FRAMES_PER_UPDATES = 1;
+
     private final AssetManager mAssetManager;
 
     private final long mNativePtr;
-    private final int mWidth;
-    private final int mHeight;
 
     private Bitmap mBuffer;
 
     private int mFrame;
-    private int mStartFrame;
-    private int mEndFrame;
-    private int mFramesPerUpdates;
-    private boolean mShouldLimitFps = false;
+    private final int mStartFrame;
+    private final int mEndFrame;
 
     private boolean mIsRunning;
 
     public LottieDrawable(Context context, String filePath, int width, int height) {
         mAssetManager = context.getAssets();
-        mWidth = width;
-        mHeight = height;
-        mBuffer = Bitmap.createBitmap(mWidth, mHeight, Bitmap.Config.ARGB_8888);
-        String contentString = loadJSONFromAsset(filePath);
-        mNativePtr = NativeLib.nCreateLottie(contentString, contentString.length(),
-                mWidth, mHeight);
+        mBuffer = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        String contentStr = loadJSONFromAsset(filePath);
+        final int[] outValues = new int[LOTTIE_INFO_COUNT];
+        mNativePtr = LottieNative.nCreateLottie(mBuffer, contentStr, contentStr.length(),
+                width, height, outValues);
         mStartFrame = 0;
-        mEndFrame = 60;
-        mFramesPerUpdates = mShouldLimitFps ? 2 : 1;
+        mEndFrame = outValues[LOTTIE_INFO_FRAME_COUNT];
     }
 
     public void release() {
-        NativeLib.nDestroyLottie(mNativePtr);
+        LottieNative.nDestroyLottie(mNativePtr);
         if (mBuffer != null) {
             mBuffer.recycle();
             mBuffer = null;
@@ -75,11 +74,11 @@ public class LottieDrawable extends Drawable implements Animatable {
         if (mNativePtr == 0) {
             return;
         }
-        NativeLib.nDrawLottieFrame(mNativePtr, mBuffer, mFrame);
+        LottieNative.nDrawLottieFrame(mNativePtr, mBuffer, mFrame);
         canvas.drawBitmap(mBuffer, 0, 0, new Paint());
 
         // Increase frame count.
-        mFrame += mFramesPerUpdates;
+        mFrame += FRAMES_PER_UPDATES;
         if (mFrame > mEndFrame) {
             mFrame = mStartFrame;
         } else if (mFrame < mStartFrame) {

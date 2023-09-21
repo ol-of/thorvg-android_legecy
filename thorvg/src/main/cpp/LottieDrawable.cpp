@@ -11,11 +11,7 @@ LottieDrawable::Data::Data(const char *content, uint32_t length, float width, fl
 }
 
 void LottieDrawable::Data::init(uint32_t *buffer) {
-    if (mCanvas != nullptr) {
-        return;
-    }
     __android_log_print(ANDROID_LOG_INFO, "XXX", "Data::init buffer=%p", buffer);
-
     if (tvg::Initializer::init(tvg::CanvasEngine::Sw, 3) == tvg::Result::Success) {
         // Create a mCanvas
         mCanvas = tvg::SwCanvas::gen();
@@ -36,7 +32,7 @@ void LottieDrawable::Data::init(uint32_t *buffer) {
 
 void LottieDrawable::Data::draw(uint32_t frame) {
     if (!mCanvas) return;
-    __android_log_print(ANDROID_LOG_INFO, "XXX", "Draw::draw mAnimation=%d", mAnimation->curFrame());
+//    __android_log_print(ANDROID_LOG_INFO, "XXX", "Draw::draw mAnimation=%d", mAnimation->curFrame());
     mAnimation->frame(frame);
     mCanvas->update(mAnimation->picture());
     mCanvas->draw();
