@@ -3,4 +3,5 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     app:assetFilePath="swinging.json"
     app:repeatMode="reverse"
-    app:repeatCount="3" />
+    app:repeatCount="5"
+    app:speed="1" />

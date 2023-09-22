@@ -17,6 +17,7 @@
             <!-- The animation plays backward. -->
             <enum name="reverse" value="2" />
         </attr>
+        <attr name="speed" format="float"/>
         <attr name="autoPlay" format="boolean" />
     </declare-styleable>
 </resources>

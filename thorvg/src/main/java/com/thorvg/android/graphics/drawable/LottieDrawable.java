@@ -14,6 +14,8 @@ import android.graphics.Paint;
 import android.graphics.PixelFormat;
 import android.graphics.drawable.Animatable;
 import android.graphics.drawable.Drawable;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.util.Xml;
@@ -72,6 +74,15 @@ public class LottieDrawable extends Drawable implements Animatable {
 
     private boolean mPaused;
 
+    //
+    // Backing variables
+    //
+
+    // How long the animation should last in ms
+    private long mDuration;
+
+    private long mFrameInterval;
+
     // The number of times the animation will repeat. The default is 0, which means the animation
     // will play only once
     private int mRepeatCount = 0;
@@ -123,141 +134,20 @@ public class LottieDrawable extends Drawable implements Animatable {
      */
     public static final int INFINITE = -1;
 
-    private LottieDrawable(Context context) {
-        mContext = context;
-        mAssetManager = context.getAssets();
-    }
+    private final Handler mHandler = new Handler(Looper.getMainLooper());
 
-    public void release() {
-        LottieNative.nDestroyLottie(mNativePtr);
-        if (mBuffer != null) {
-            mBuffer.recycle();
-            mBuffer = null;
-        }
-    }
-
-    public static LottieDrawable create(Context context, int rid) {
-        try {
-            final Resources resources = context.getResources();
-            final XmlPullParser parser = resources.getXml(rid);
-            final AttributeSet attrs = Xml.asAttributeSet(parser);
-            int type;
-            while ((type = parser.next()) != XmlPullParser.START_TAG &&
-                    type != XmlPullParser.END_DOCUMENT) {
-                // Empty loop
-            }
-            if (type != XmlPullParser.START_TAG) {
-                throw new XmlPullParserException("No start tag found");
-            }
-            final LottieDrawable drawable = new LottieDrawable(context);
-            drawable.inflate(resources, parser, attrs);
-            return drawable;
-        } catch (XmlPullParserException e) {
-            Log.e(TAG, "parser error", e);
-        } catch (IOException e) {
-            Log.e(TAG, "parser error", e);
-        }
-        return null;
-    }
-
-    @Override
-    public void inflate(@NonNull Resources r, @NonNull XmlPullParser parser,
-            @NonNull AttributeSet attrs, @Nullable Theme theme) {
-        final TypedArray a = mContext.obtainStyledAttributes(attrs, R.styleable.LottieDrawable, 0, 0);
-        mAssetFilePath = a.getString(R.styleable.LottieDrawable_assetFilePath);
-        setRepeatMode(a.getInt(R.styleable.LottieDrawable_repeatMode, RESTART));
-        setRepeatCount(a.getInt(R.styleable.LottieDrawable_repeatCount, INFINITE));
-        mAutoPlay = a.getBoolean(R.styleable.LottieDrawable_autoPlay, true);
-        a.recycle();
-
-        String contentStr = loadJsonFromAsset(mAssetFilePath);
-        final int[] outValues = new int[LOTTIE_INFO_COUNT];
-        mNativePtr = LottieNative.nCreateLottie(contentStr, contentStr.length(), outValues);
-        mFirstFrame = 0;
-        mLastFrame = outValues[LOTTIE_INFO_FRAME_COUNT];
-    }
-
-    private String loadJsonFromAsset(String fileName) {
-        String json = null;
-        try {
-            InputStream inputStream = mAssetManager.open(fileName);
-
-            int size = inputStream.available();
-            byte[] buffer = new byte[size];
-
-            // Read JSON data from InputStream.
-            inputStream.read(buffer);
-            inputStream.close();
-
-            // Convert a byte array to a string.
-            json = new String(buffer, StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return json;
-    }
-
-    public void setSize(int width, int height) {
-        mWidth = width;
-        mHeight = height;
-        mBuffer = Bitmap.createBitmap(mWidth, mHeight, Bitmap.Config.ARGB_8888);
-        LottieNative.nSetLottieBufferSize(mNativePtr, mBuffer, mWidth, mHeight);
-    }
-
-    @Override
-    public void start() {
-        mRunning = true;
-        mFrame = mFirstFrame;
-        mRemainingRepeatCount = mRepeatCount;
-        invalidateSelf();
-    }
-
-    @Override
-    public void stop() {
-        mRunning = false;
-    }
-
-    public void pause() {
-        mPaused = true;
-    }
-
-    public void resume() {
-        mPaused = false;
-        invalidateSelf();
-    }
-
-    @Override
-    public boolean isRunning() {
-        return mRunning;
-    }
-
-    @Override
-    public void draw(@NonNull Canvas canvas) {
-        if (mNativePtr == 0) {
-            return;
-        }
-        if (mAutoPlay || mRunning) {
-            LottieNative.nDrawLottieFrame(mNativePtr, mBuffer, (int) mFrame);
-            canvas.drawBitmap(mBuffer, 0, 0, new Paint());
-
-            // Increase frame count.
-            mFrame += (mFramesPerUpdate * mSpeed);
-            if (mFrame > mLastFrame) {
-                mFrame = mFirstFrame;
-                --mRemainingRepeatCount;
-            } else if (mFrame < mFirstFrame) {
-                mFrame = mLastFrame;
-                --mRemainingRepeatCount;
-            }
-
-            if (mPaused) {
-                return;
-            }
-
+    private final Runnable mNextFrameRunnable = new Runnable() {
+        @Override
+        public void run() {
             if (mRepeatCount == INFINITE || mRemainingRepeatCount > -1) {
                 invalidateSelf();
             }
         }
+    };
+
+    private LottieDrawable(Context context) {
+        mContext = context;
+        mAssetManager = context.getAssets();
     }
 
     @Override
@@ -346,5 +236,149 @@ public class LottieDrawable extends Drawable implements Animatable {
 
     public void setSpeed(float speed) {
         mSpeed = speed;
+        updateFrameInterval();
+    }
+
+    private void updateFrameInterval() {
+        mFrameInterval = (long) (mDuration / getTotalFrame() / mSpeed);
+    }
+
+    public void release() {
+        LottieNative.nDestroyLottie(mNativePtr);
+        if (mBuffer != null) {
+            mBuffer.recycle();
+            mBuffer = null;
+        }
+    }
+
+    public static LottieDrawable create(Context context, int rid) {
+        try {
+            final Resources resources = context.getResources();
+            final XmlPullParser parser = resources.getXml(rid);
+            final AttributeSet attrs = Xml.asAttributeSet(parser);
+            int type;
+            while ((type = parser.next()) != XmlPullParser.START_TAG &&
+                    type != XmlPullParser.END_DOCUMENT) {
+                // Empty loop
+            }
+            if (type != XmlPullParser.START_TAG) {
+                throw new XmlPullParserException("No start tag found");
+            }
+            final LottieDrawable drawable = new LottieDrawable(context);
+            drawable.inflate(resources, parser, attrs);
+            return drawable;
+        } catch (XmlPullParserException e) {
+            Log.e(TAG, "parser error", e);
+        } catch (IOException e) {
+            Log.e(TAG, "parser error", e);
+        }
+        return null;
+    }
+
+    @Override
+    public void inflate(@NonNull Resources r, @NonNull XmlPullParser parser,
+            @NonNull AttributeSet attrs, @Nullable Theme theme) {
+        final TypedArray a = mContext.obtainStyledAttributes(attrs, R.styleable.LottieDrawable, 0, 0);
+        mAssetFilePath = a.getString(R.styleable.LottieDrawable_assetFilePath);
+        setRepeatMode(a.getInt(R.styleable.LottieDrawable_repeatMode, RESTART));
+        setRepeatCount(a.getInt(R.styleable.LottieDrawable_repeatCount, INFINITE));
+        mAutoPlay = a.getBoolean(R.styleable.LottieDrawable_autoPlay, true);
+        mSpeed = a.getFloat(R.styleable.LottieDrawable_speed, 1f);
+        a.recycle();
+
+        String contentStr = loadJsonFromAsset(mAssetFilePath);
+        final int[] outValues = new int[LOTTIE_INFO_COUNT];
+        mNativePtr = LottieNative.nCreateLottie(contentStr, contentStr.length(), outValues);
+        mFirstFrame = 0;
+        mLastFrame = outValues[LOTTIE_INFO_FRAME_COUNT];
+        mDuration = outValues[LOTTIE_INFO_DURATION] * 1000L;
+        updateFrameInterval();
+    }
+
+    private String loadJsonFromAsset(String fileName) {
+        String json = null;
+        try {
+            InputStream inputStream = mAssetManager.open(fileName);
+
+            int size = inputStream.available();
+            byte[] buffer = new byte[size];
+
+            // Read JSON data from InputStream.
+            inputStream.read(buffer);
+            inputStream.close();
+
+            // Convert a byte array to a string.
+            json = new String(buffer, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return json;
+    }
+
+    public void setSize(int width, int height) {
+        mWidth = width;
+        mHeight = height;
+        mBuffer = Bitmap.createBitmap(mWidth, mHeight, Bitmap.Config.ARGB_8888);
+        LottieNative.nSetLottieBufferSize(mNativePtr, mBuffer, mWidth, mHeight);
+    }
+
+    @Override
+    public boolean isRunning() {
+        return mRunning;
+    }
+
+    @Override
+    public void start() {
+        mRunning = true;
+        mFrame = mFirstFrame;
+        mRemainingRepeatCount = mRepeatCount;
+        invalidateSelf();
+    }
+
+    @Override
+    public void stop() {
+        mRunning = false;
+        mHandler.removeCallbacks(mNextFrameRunnable);
+    }
+
+    public void pause() {
+        mPaused = true;
+        mHandler.removeCallbacks(mNextFrameRunnable);
+    }
+
+    public void resume() {
+        mPaused = false;
+        invalidateSelf();
+    }
+
+    @Override
+    public void draw(@NonNull Canvas canvas) {
+        if (mNativePtr == 0) {
+            return;
+        }
+        if (mAutoPlay || mRunning) {
+            long startTime = System.nanoTime();
+
+            LottieNative.nDrawLottieFrame(mNativePtr, mBuffer, (int) mFrame);
+            canvas.drawBitmap(mBuffer, 0, 0, new Paint());
+
+            // Increase frame count.
+            mFrame += mFramesPerUpdate;
+            if (mFrame > mLastFrame) {
+                mFrame = mFirstFrame;
+                --mRemainingRepeatCount;
+            } else if (mFrame < mFirstFrame) {
+                mFrame = mLastFrame;
+                --mRemainingRepeatCount;
+            }
+
+            long endTime = System.nanoTime();
+
+            if (mPaused) {
+                return;
+            }
+
+            mHandler.postDelayed(mNextFrameRunnable, mFrameInterval - ((endTime - startTime) / 1000000));
+        }
     }
 }
