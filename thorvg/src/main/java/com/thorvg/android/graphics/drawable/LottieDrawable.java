@@ -84,10 +84,11 @@ public class LottieDrawable extends Drawable implements Animatable {
 
     private String mAssetFilePath;
 
+    private long mNativePtr;
+
     private Bitmap mBuffer;
     private int mWidth;
     private int mHeight;
-    private long mNativePtr;
     private int mFrame;
     private int mFirstFrame;
     private int mLastFrame;
@@ -118,85 +119,9 @@ public class LottieDrawable extends Drawable implements Animatable {
      */
     public static final int INFINITE = -1;
 
-    public LottieDrawable(Context context) {
+    private LottieDrawable(Context context) {
         mContext = context;
         mAssetManager = context.getAssets();
-    }
-
-    public void setSize(int width, int height) {
-        mWidth = width;
-        mHeight = height;
-        mBuffer = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-        String contentStr = loadJSONFromAsset(mAssetFilePath);
-        final int[] outValues = new int[LOTTIE_INFO_COUNT];
-        mNativePtr = LottieNative.nCreateLottie(mBuffer, contentStr, contentStr.length(),
-                width, height, outValues);
-        mFirstFrame = 0;
-        mLastFrame = outValues[LOTTIE_INFO_FRAME_COUNT];
-    }
-
-    /**
-     * Sets how many times the animation should be repeated. If the repeat
-     * count is 0, the animation is never repeated. If the repeat count is
-     * greater than 0 or {@link #INFINITE}, the repeat mode will be taken
-     * into account. The repeat count is 0 by default.
-     *
-     * @param value the number of times the animation should be repeated
-     */
-    public void setRepeatCount(int value) {
-        mRepeatCount = value;
-        mRemainingRepeatCount = value;
-    }
-    /**
-     * Defines how many times the animation should repeat. The default value
-     * is 0.
-     *
-     * @return the number of times the animation should repeat, or {@link #INFINITE}
-     */
-    public int getRepeatCount() {
-        return mRepeatCount;
-    }
-
-
-    /**
-     * Defines what this animation should do when it reaches the end. This
-     * setting is applied only when the repeat count is either greater than
-     * 0 or {@link #INFINITE}. Defaults to {@link #RESTART}.
-     *
-     * @param value {@link #RESTART} or {@link #REVERSE}
-     */
-    public void setRepeatMode(@RepeatMode int value) {
-        mRepeatMode = value;
-        mFramesPerUpdates = mRepeatMode == RESTART ? 1 : -1;
-    }
-    /**
-     * Defines what this animation should do when it reaches the end.
-     *
-     * @return either one of {@link #REVERSE} or {@link #RESTART}
-     */
-    @RepeatMode
-    public int getRepeatMode() {
-        return mRepeatMode;
-    }
-
-    private String loadJSONFromAsset(String fileName) {
-        String json = null;
-        try {
-            InputStream inputStream = mAssetManager.open(fileName);
-
-            int size = inputStream.available();
-            byte[] buffer = new byte[size];
-
-            // Read JSON data from InputStream.
-            inputStream.read(buffer);
-            inputStream.close();
-
-            // Convert a byte array to a string.
-            json = new String(buffer, StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return json;
     }
 
     public void release() {
@@ -207,7 +132,6 @@ public class LottieDrawable extends Drawable implements Animatable {
         }
     }
 
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
     public static LottieDrawable create(Context context, int rid) {
         try {
             final Resources resources = context.getResources();
@@ -241,11 +165,45 @@ public class LottieDrawable extends Drawable implements Animatable {
         setRepeatCount(a.getInt(R.styleable.LottieDrawable_repeatCount, INFINITE));
         mAutoPlay = a.getBoolean(R.styleable.LottieDrawable_autoPlay, true);
         a.recycle();
+
+        String contentStr = loadJsonFromAsset(mAssetFilePath);
+        final int[] outValues = new int[LOTTIE_INFO_COUNT];
+        mNativePtr = LottieNative.nCreateLottie(contentStr, contentStr.length(), outValues);
+        mFirstFrame = 0;
+        mLastFrame = outValues[LOTTIE_INFO_FRAME_COUNT];
+    }
+
+    private String loadJsonFromAsset(String fileName) {
+        String json = null;
+        try {
+            InputStream inputStream = mAssetManager.open(fileName);
+
+            int size = inputStream.available();
+            byte[] buffer = new byte[size];
+
+            // Read JSON data from InputStream.
+            inputStream.read(buffer);
+            inputStream.close();
+
+            // Convert a byte array to a string.
+            json = new String(buffer, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return json;
+    }
+
+    public void setSize(int width, int height) {
+        mWidth = width;
+        mHeight = height;
+        mBuffer = Bitmap.createBitmap(mWidth, mHeight, Bitmap.Config.ARGB_8888);
+        LottieNative.nSetLottieBufferSize(mNativePtr, mBuffer, mWidth, mHeight);
     }
 
     @Override
     public void start() {
         mRunning = true;
+        invalidateSelf();
     }
 
     @Override
@@ -305,5 +263,64 @@ public class LottieDrawable extends Drawable implements Animatable {
     @Override
     public int getIntrinsicHeight() {
         return mHeight;
+    }
+
+    /**
+     * Sets how many times the animation should be repeated. If the repeat
+     * count is 0, the animation is never repeated. If the repeat count is
+     * greater than 0 or {@link #INFINITE}, the repeat mode will be taken
+     * into account. The repeat count is 0 by default.
+     *
+     * @param value the number of times the animation should be repeated
+     */
+    public void setRepeatCount(int value) {
+        mRepeatCount = value;
+        mRemainingRepeatCount = value;
+    }
+    /**
+     * Defines how many times the animation should repeat. The default value
+     * is 0.
+     *
+     * @return the number of times the animation should repeat, or {@link #INFINITE}
+     */
+    public int getRepeatCount() {
+        return mRepeatCount;
+    }
+
+    /**
+     * Defines what this animation should do when it reaches the end. This
+     * setting is applied only when the repeat count is either greater than
+     * 0 or {@link #INFINITE}. Defaults to {@link #RESTART}.
+     *
+     * @param value {@link #RESTART} or {@link #REVERSE}
+     */
+    public void setRepeatMode(@RepeatMode int value) {
+        mRepeatMode = value;
+        mFramesPerUpdates = mRepeatMode == RESTART ? 1 : -1;
+    }
+    /**
+     * Defines what this animation should do when it reaches the end.
+     *
+     * @return either one of {@link #REVERSE} or {@link #RESTART}
+     */
+    @RepeatMode
+    public int getRepeatMode() {
+        return mRepeatMode;
+    }
+
+    public String getAssetFilePath() {
+        return mAssetFilePath;
+    }
+
+    public int getFirstFrame() {
+        return mFirstFrame;
+    }
+
+    public int getLastFrame() {
+        return mLastFrame;
+    }
+
+    public int getTotalFrame() {
+        return mLastFrame - mFirstFrame;
     }
 }

@@ -32,15 +32,20 @@ public class LottieAnimationView extends View {
 
     public void setLottieDrawable(@DrawableRes int resId) {
         mLottieDrawable = LottieDrawable.create(getContext(), resId);
+        if (mLottieDrawable != null) {
+            mLottieDrawable.setCallback(this);
+        }
     }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
 
-        if (mLottieDrawable != null && mLottieDrawable.getCallback() == null) {
-            mLottieDrawable.setCallback(this);
-            mLottieDrawable.setSize(getMeasuredWidth(), getMeasuredHeight());
+        final int width = getMeasuredWidth();
+        final int height = getMeasuredHeight();
+        if (mLottieDrawable != null && (width != mLottieDrawable.getIntrinsicWidth()
+                || height != mLottieDrawable.getIntrinsicHeight())) {
+            mLottieDrawable.setSize(width, height);
         }
     }
 
