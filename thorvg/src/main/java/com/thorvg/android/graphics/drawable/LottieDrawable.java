@@ -23,7 +23,6 @@ import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
-
 import com.thorvg.android.LottieNative;
 import com.thorvg.android.R;
 
@@ -53,9 +52,6 @@ public class LottieDrawable extends Drawable implements Animatable {
 
     /**
      * Internal variables
-     * NOTE: This object implements the clone() method, making a deep copy of any referenced
-     * objects. As other non-trivial fields are added to this class, make sure to add logic
-     * to clone() to make deep copies of them.
      */
 
     private final Context mContext;
@@ -74,9 +70,9 @@ public class LottieDrawable extends Drawable implements Animatable {
 
     private boolean mPaused;
 
-    //
-    // Backing variables
-    //
+    /**
+     * Backing variables
+     */
 
     // How long the animation should last in ms
     private long mDuration;
@@ -86,7 +82,9 @@ public class LottieDrawable extends Drawable implements Animatable {
     // The number of times the animation will repeat. The default is 0, which means the animation
     // will play only once
     private int mRepeatCount = 0;
+
     private int mRemainingRepeatCount;
+
     /**
      * The type of repetition that will occur when repeatMode is nonzero. RESTART means the
      * animation will start from the beginning on every new cycle. REVERSE means the animation
@@ -101,13 +99,34 @@ public class LottieDrawable extends Drawable implements Animatable {
     private long mNativePtr;
 
     private Bitmap mBuffer;
+
     private int mWidth;
+
     private int mHeight;
-    private float mFrame;
+
+    private int mFrame;
+
     private int mFirstFrame;
+
     private int mLastFrame;
+
     private float mSpeed = 1f;
+
     private boolean mAutoPlay;
+
+    /**
+     * Animation handler used to schedule updates for this animation.
+     */
+    private final Handler mHandler = new Handler(Looper.getMainLooper());
+
+    private final Runnable mNextFrameRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (mRepeatCount == INFINITE || mRemainingRepeatCount > -1) {
+                invalidateSelf();
+            }
+        }
+    };
 
     /**
      * Public constants
@@ -123,27 +142,18 @@ public class LottieDrawable extends Drawable implements Animatable {
      * or a positive value, the animation restarts from the beginning.
      */
     public static final int RESTART = 1;
+
     /**
      * When the animation reaches the end and <code>repeatCount</code> is INFINITE
      * or a positive value, the animation reverses direction on every iteration.
      */
     public static final int REVERSE = 2;
+
     /**
      * This value used used with the {@link #setRepeatCount(int)} property to repeat
      * the animation indefinitely.
      */
     public static final int INFINITE = -1;
-
-    private final Handler mHandler = new Handler(Looper.getMainLooper());
-
-    private final Runnable mNextFrameRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if (mRepeatCount == INFINITE || mRemainingRepeatCount > -1) {
-                invalidateSelf();
-            }
-        }
-    };
 
     private LottieDrawable(Context context) {
         mContext = context;
@@ -187,6 +197,7 @@ public class LottieDrawable extends Drawable implements Animatable {
         mRepeatCount = value;
         mRemainingRepeatCount = value;
     }
+
     /**
      * Defines how many times the animation should repeat. The default value
      * is 0.
@@ -208,6 +219,7 @@ public class LottieDrawable extends Drawable implements Animatable {
         mRepeatMode = value;
         mFramesPerUpdate = mRepeatMode == RESTART ? 1 : -1;
     }
+
     /**
      * Defines what this animation should do when it reaches the end.
      *
@@ -232,6 +244,15 @@ public class LottieDrawable extends Drawable implements Animatable {
 
     public int getTotalFrame() {
         return mLastFrame - mFirstFrame;
+    }
+
+    /**
+     * Gets the length of the animation. The default duration is 300 milliseconds.
+     *
+     * @return The length of the animation, in milliseconds.
+     */
+    public long getDuration() {
+        return mDuration;
     }
 
     public void setSpeed(float speed) {
@@ -366,10 +387,10 @@ public class LottieDrawable extends Drawable implements Animatable {
             mFrame += mFramesPerUpdate;
             if (mFrame > mLastFrame) {
                 mFrame = mFirstFrame;
-                --mRemainingRepeatCount;
+                mRemainingRepeatCount--;
             } else if (mFrame < mFirstFrame) {
                 mFrame = mLastFrame;
-                --mRemainingRepeatCount;
+                mRemainingRepeatCount--;
             }
 
             long endTime = System.nanoTime();
