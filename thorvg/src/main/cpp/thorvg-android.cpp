@@ -19,6 +19,7 @@ Java_com_thorvg_android_LottieNative_nCreateLottie(JNIEnv *env, jclass clazz,
     jint* contentInfo = env->GetIntArrayElements(outValues, nullptr);
     if (contentInfo != nullptr) {
         contentInfo[0] = (jint) newData->mAnimation->totalFrame();
+        contentInfo[1] = (jint) newData->mAnimation->duration();
         env->ReleaseIntArrayElements(outValues, contentInfo, 0);
     }
 

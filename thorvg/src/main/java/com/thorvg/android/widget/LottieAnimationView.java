@@ -37,6 +37,30 @@ public class LottieAnimationView extends View {
         }
     }
 
+    public void startAnimation() {
+        if (mLottieDrawable != null) {
+            mLottieDrawable.start();
+        }
+    }
+
+    public void stopAnimation() {
+        if (mLottieDrawable != null) {
+            mLottieDrawable.stop();
+        }
+    }
+
+    public void pauseAnimation() {
+        if (mLottieDrawable != null) {
+            mLottieDrawable.pause();
+        }
+    }
+
+    public void resumeAnimation() {
+        if (mLottieDrawable != null) {
+            mLottieDrawable.resume();
+        }
+    }
+
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);

@@ -39,14 +39,15 @@ import org.xmlpull.v1.XmlPullParserException;
 // https://android.googlesource.com/platform/frameworks/base/+/HEAD/core/java/android/animation/ValueAnimator.java
 
 public class LottieDrawable extends Drawable implements Animatable {
-    private static final String TAG = LottieDrawable.class.getSimpleName();
+    private static final String TAG = "LottieDrawable";
 
     /**
      * Internal constants
      */
 
     private static final int LOTTIE_INFO_FRAME_COUNT = 0;
-    private static final int LOTTIE_INFO_COUNT = 1;
+    private static final int LOTTIE_INFO_DURATION = 1;
+    private static final int LOTTIE_INFO_COUNT = 2;
 
     /**
      * Internal variables
@@ -68,6 +69,8 @@ public class LottieDrawable extends Drawable implements Animatable {
      * animation frame, which occurs after their delay elapses.
      */
     private boolean mRunning = false;
+
+    private boolean mPaused;
 
     // The number of times the animation will repeat. The default is 0, which means the animation
     // will play only once
@@ -204,12 +207,23 @@ public class LottieDrawable extends Drawable implements Animatable {
     @Override
     public void start() {
         mRunning = true;
+        mFrame = mFirstFrame;
+        mRemainingRepeatCount = mRepeatCount;
         invalidateSelf();
     }
 
     @Override
     public void stop() {
         mRunning = false;
+    }
+
+    public void pause() {
+        mPaused = true;
+    }
+
+    public void resume() {
+        mPaused = false;
+        invalidateSelf();
     }
 
     @Override
@@ -234,6 +248,10 @@ public class LottieDrawable extends Drawable implements Animatable {
             } else if (mFrame < mFirstFrame) {
                 mFrame = mLastFrame;
                 --mRemainingRepeatCount;
+            }
+
+            if (mPaused) {
+                return;
             }
 
             if (mRepeatCount == INFINITE || mRemainingRepeatCount > -1) {
@@ -261,6 +279,7 @@ public class LottieDrawable extends Drawable implements Animatable {
     public int getIntrinsicWidth() {
         return mWidth;
     }
+
     @Override
     public int getIntrinsicHeight() {
         return mHeight;
