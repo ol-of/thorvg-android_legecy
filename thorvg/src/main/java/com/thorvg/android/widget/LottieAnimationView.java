@@ -5,45 +5,42 @@ import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 import android.view.View;
-
+import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.thorvg.android.graphics.drawable.LottieDrawable;
 
 public class LottieAnimationView extends View {
     private LottieDrawable mLottieDrawable;
-    private String mFilePath = null;
 
     public LottieAnimationView(Context context) {
-        super(context);
+        this(context, null);
     }
 
     public LottieAnimationView(Context context, @Nullable AttributeSet attrs) {
-        super(context, attrs);
+        this(context, attrs, 0);
     }
 
     public LottieAnimationView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
-        super(context, attrs, defStyleAttr);
+        this(context, attrs, defStyleAttr, 0);
     }
 
-    public LottieAnimationView(Context context, @Nullable AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+    public LottieAnimationView(Context context, @Nullable AttributeSet attrs, int defStyleAttr,
+            int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
     }
 
-    public void setFilePath(String filePath) {
-        if (filePath == null || filePath.isEmpty() || filePath.equals(mFilePath)) {
-            return;
-        }
-        mFilePath = filePath;
+    public void setLottieDrawable(@DrawableRes int resId) {
+        mLottieDrawable = LottieDrawable.create(getContext(), resId);
     }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
 
-        if (mLottieDrawable == null && mFilePath != null && !mFilePath.isEmpty()) {
-            mLottieDrawable = new LottieDrawable(getContext(), mFilePath, getMeasuredWidth(), getMeasuredHeight());
+        if (mLottieDrawable != null && mLottieDrawable.getCallback() == null) {
             mLottieDrawable.setCallback(this);
+            mLottieDrawable.setSize(getMeasuredWidth(), getMeasuredHeight());
         }
     }
 
@@ -64,7 +61,6 @@ public class LottieAnimationView extends View {
         if (lottieDrawable == null) {
             return;
         }
-
         lottieDrawable.draw(canvas);
     }
 
