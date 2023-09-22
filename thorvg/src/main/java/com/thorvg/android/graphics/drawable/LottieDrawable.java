@@ -1,5 +1,7 @@
 package com.thorvg.android.graphics.drawable;
 
+import static androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX;
+
 import android.content.Context;
 import android.content.res.AssetManager;
 import android.content.res.Resources;
@@ -18,6 +20,8 @@ import android.util.Xml;
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RestrictTo;
+
 import com.thorvg.android.LottieNative;
 import com.thorvg.android.R;
 
@@ -68,6 +72,7 @@ public class LottieDrawable extends Drawable implements Animatable {
     // The number of times the animation will repeat. The default is 0, which means the animation
     // will play only once
     private int mRepeatCount = 0;
+    private int mRemainingRepeatCount;
     /**
      * The type of repetition that will occur when repeatMode is nonzero. RESTART means the
      * animation will start from the beginning on every new cycle. REVERSE means the animation
@@ -75,24 +80,24 @@ public class LottieDrawable extends Drawable implements Animatable {
      */
     private int mRepeatMode = RESTART;
 
-
     private int mFramesPerUpdates = 1;
 
-    private String mFilePath;
+    private String mAssetFilePath;
 
     private Bitmap mBuffer;
     private int mWidth;
     private int mHeight;
     private long mNativePtr;
     private int mFrame;
-    private int mStartFrame;
-    private int mEndFrame;
+    private int mFirstFrame;
+    private int mLastFrame;
+    private boolean mAutoPlay;
 
     /**
      * Public constants
      */
 
-    /** @hide */
+    @RestrictTo(LIBRARY_GROUP_PREFIX)
     @IntDef({RESTART, REVERSE})
     @Retention(RetentionPolicy.SOURCE)
     public @interface RepeatMode {}
@@ -122,12 +127,12 @@ public class LottieDrawable extends Drawable implements Animatable {
         mWidth = width;
         mHeight = height;
         mBuffer = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-        String contentStr = loadJSONFromAsset(mFilePath);
+        String contentStr = loadJSONFromAsset(mAssetFilePath);
         final int[] outValues = new int[LOTTIE_INFO_COUNT];
         mNativePtr = LottieNative.nCreateLottie(mBuffer, contentStr, contentStr.length(),
                 width, height, outValues);
-        mStartFrame = 0;
-        mEndFrame = outValues[LOTTIE_INFO_FRAME_COUNT];
+        mFirstFrame = 0;
+        mLastFrame = outValues[LOTTIE_INFO_FRAME_COUNT];
     }
 
     /**
@@ -140,6 +145,7 @@ public class LottieDrawable extends Drawable implements Animatable {
      */
     public void setRepeatCount(int value) {
         mRepeatCount = value;
+        mRemainingRepeatCount = value;
     }
     /**
      * Defines how many times the animation should repeat. The default value
@@ -201,6 +207,7 @@ public class LottieDrawable extends Drawable implements Animatable {
         }
     }
 
+    @RestrictTo(LIBRARY_GROUP_PREFIX)
     public static LottieDrawable create(Context context, int rid) {
         try {
             final Resources resources = context.getResources();
@@ -229,18 +236,21 @@ public class LottieDrawable extends Drawable implements Animatable {
     public void inflate(@NonNull Resources r, @NonNull XmlPullParser parser,
             @NonNull AttributeSet attrs, @Nullable Theme theme) {
         final TypedArray a = mContext.obtainStyledAttributes(attrs, R.styleable.LottieDrawable, 0, 0);
-        mFilePath = a.getString(R.styleable.LottieDrawable_assetFilePath);
+        mAssetFilePath = a.getString(R.styleable.LottieDrawable_assetFilePath);
         setRepeatMode(a.getInt(R.styleable.LottieDrawable_repeatMode, RESTART));
         setRepeatCount(a.getInt(R.styleable.LottieDrawable_repeatCount, INFINITE));
+        mAutoPlay = a.getBoolean(R.styleable.LottieDrawable_autoPlay, true);
         a.recycle();
     }
 
     @Override
     public void start() {
+        mRunning = true;
     }
 
     @Override
     public void stop() {
+        mRunning = false;
     }
 
     @Override
@@ -253,18 +263,24 @@ public class LottieDrawable extends Drawable implements Animatable {
         if (mNativePtr == 0) {
             return;
         }
-        LottieNative.nDrawLottieFrame(mNativePtr, mBuffer, mFrame);
-        canvas.drawBitmap(mBuffer, 0, 0, new Paint());
+        if (mAutoPlay || mRunning) {
+            LottieNative.nDrawLottieFrame(mNativePtr, mBuffer, mFrame);
+            canvas.drawBitmap(mBuffer, 0, 0, new Paint());
 
-        // Increase frame count.
-        mFrame += mFramesPerUpdates;
-        if (mFrame > mEndFrame) {
-            mFrame = mStartFrame;
-        } else if (mFrame < mStartFrame) {
-            mFrame = mEndFrame;
+            // Increase frame count.
+            mFrame += mFramesPerUpdates;
+            if (mFrame > mLastFrame) {
+                mFrame = mFirstFrame;
+                --mRemainingRepeatCount;
+            } else if (mFrame < mFirstFrame) {
+                mFrame = mLastFrame;
+                --mRemainingRepeatCount;
+            }
+
+            if (mRepeatCount == INFINITE || mRemainingRepeatCount > -1) {
+                invalidateSelf();
+            }
         }
-
-        invalidateSelf();
     }
 
     @Override
@@ -280,5 +296,14 @@ public class LottieDrawable extends Drawable implements Animatable {
         // We can't tell whether the drawable is fully opaque unless we examine all the pixels,
         // but we could tell it is transparent if the root alpha is 0.
         return getAlpha() == 0 ? PixelFormat.TRANSPARENT : PixelFormat.TRANSLUCENT;
+    }
+
+    @Override
+    public int getIntrinsicWidth() {
+        return mWidth;
+    }
+    @Override
+    public int getIntrinsicHeight() {
+        return mHeight;
     }
 }
