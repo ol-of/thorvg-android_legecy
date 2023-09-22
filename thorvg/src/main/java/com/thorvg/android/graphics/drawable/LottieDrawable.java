@@ -80,7 +80,7 @@ public class LottieDrawable extends Drawable implements Animatable {
      */
     private int mRepeatMode = RESTART;
 
-    private int mFramesPerUpdates = 1;
+    private int mFramesPerUpdate = 1;
 
     private String mAssetFilePath;
 
@@ -89,9 +89,10 @@ public class LottieDrawable extends Drawable implements Animatable {
     private Bitmap mBuffer;
     private int mWidth;
     private int mHeight;
-    private int mFrame;
+    private float mFrame;
     private int mFirstFrame;
     private int mLastFrame;
+    private float mSpeed = 1f;
     private boolean mAutoPlay;
 
     /**
@@ -222,11 +223,11 @@ public class LottieDrawable extends Drawable implements Animatable {
             return;
         }
         if (mAutoPlay || mRunning) {
-            LottieNative.nDrawLottieFrame(mNativePtr, mBuffer, mFrame);
+            LottieNative.nDrawLottieFrame(mNativePtr, mBuffer, (int) mFrame);
             canvas.drawBitmap(mBuffer, 0, 0, new Paint());
 
             // Increase frame count.
-            mFrame += mFramesPerUpdates;
+            mFrame += (mFramesPerUpdate * mSpeed);
             if (mFrame > mLastFrame) {
                 mFrame = mFirstFrame;
                 --mRemainingRepeatCount;
@@ -296,7 +297,7 @@ public class LottieDrawable extends Drawable implements Animatable {
      */
     public void setRepeatMode(@RepeatMode int value) {
         mRepeatMode = value;
-        mFramesPerUpdates = mRepeatMode == RESTART ? 1 : -1;
+        mFramesPerUpdate = mRepeatMode == RESTART ? 1 : -1;
     }
     /**
      * Defines what this animation should do when it reaches the end.
@@ -322,5 +323,9 @@ public class LottieDrawable extends Drawable implements Animatable {
 
     public int getTotalFrame() {
         return mLastFrame - mFirstFrame;
+    }
+
+    public void setSpeed(float speed) {
+        mSpeed = speed;
     }
 }
