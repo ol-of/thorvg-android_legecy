@@ -19,6 +19,7 @@ import android.os.Looper;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.util.Xml;
+import androidx.annotation.FloatRange;
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -170,9 +171,7 @@ public class LottieDrawable extends Drawable implements Animatable {
 
     @Override
     public int getOpacity() {
-        // We can't tell whether the drawable is fully opaque unless we examine all the pixels,
-        // but we could tell it is transparent if the root alpha is 0.
-        return getAlpha() == 0 ? PixelFormat.TRANSPARENT : PixelFormat.TRANSLUCENT;
+        return PixelFormat.TRANSLUCENT;
     }
 
     @Override
@@ -255,9 +254,14 @@ public class LottieDrawable extends Drawable implements Animatable {
         return mDuration;
     }
 
-    public void setSpeed(float speed) {
+    public void setSpeed(@FloatRange(from = 0) float speed) {
         mSpeed = speed;
         updateFrameInterval();
+    }
+
+    @FloatRange(from = 0)
+    public float getSpeed() {
+        return mSpeed;
     }
 
     private void updateFrameInterval() {
