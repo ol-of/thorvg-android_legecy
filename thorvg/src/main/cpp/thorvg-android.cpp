@@ -70,3 +70,21 @@ Java_com_thorvg_android_LottieNative_nDestroyLottie(JNIEnv *env, jclass clazz, j
     auto* data = reinterpret_cast<LottieDrawable::Data*>(lottiePtr);
     delete data;
 }
+
+extern "C"
+JNIEXPORT jlong JNICALL
+Java_com_thorvg_android_SVGNative_nCreateSVG(JNIEnv *env, jclass clazz, jstring content) {
+    // TODO: implement nCreateSVG()
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_thorvg_android_SVGNative_nDestroySVG(JNIEnv *env, jclass clazz, jlong svgPtr) {
+    tvg::Initializer::term(tvg::CanvasEngine::Sw);
+
+    if (svgPtr == 0) {
+        return;
+    }
+
+    // TODO: implement nDestroySVG()
+}
