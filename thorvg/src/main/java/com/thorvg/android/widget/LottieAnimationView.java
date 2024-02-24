@@ -37,6 +37,19 @@ public class LottieAnimationView extends View {
         }
     }
 
+    public void setLottieDrawable(LottieDrawable drawable) {
+        mLottieDrawable = drawable;
+        if (mLottieDrawable != null) {
+            mLottieDrawable.setCallback(this);
+        }
+    }
+
+    public void setSize(int width, int height) {
+        if (mLottieDrawable != null) {
+            mLottieDrawable.setSize(width, height);
+        }
+    }
+
     public void startAnimation() {
         if (mLottieDrawable != null) {
             mLottieDrawable.start();
@@ -63,14 +76,11 @@ public class LottieAnimationView extends View {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-
-        final int width = getMeasuredWidth();
-        final int height = getMeasuredHeight();
-        if (mLottieDrawable != null && (width != mLottieDrawable.getIntrinsicWidth()
-                || height != mLottieDrawable.getIntrinsicHeight())) {
-            mLottieDrawable.setSize(width, height);
+        if (mLottieDrawable == null) {
+            super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+            return;
         }
+        setMeasuredDimension(mLottieDrawable.getIntrinsicWidth(), mLottieDrawable.getIntrinsicHeight());
     }
 
     @Override
@@ -86,11 +96,9 @@ public class LottieAnimationView extends View {
     public void draw(Canvas canvas) {
         super.draw(canvas);
 
-        final LottieDrawable lottieDrawable = mLottieDrawable;
-        if (lottieDrawable == null) {
-            return;
+        if (mLottieDrawable != null) {
+            mLottieDrawable.draw(canvas);
         }
-        lottieDrawable.draw(canvas);
     }
 
     @Override
