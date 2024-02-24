@@ -14,5 +14,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "thorvg-android"
-include(":app")
+include(":sample")
 include(":thorvg")
