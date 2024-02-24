@@ -12,7 +12,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         val lottieView = findViewById<LottieAnimationView>(R.id.lottie_view)
-        lottieView.setLottieDrawable(R.drawable.lottie_swinging)
 
         findViewById<View>(R.id.anim_state).setOnClickListener { v: View ->
             val button = v as TextView

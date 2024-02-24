@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <declare-styleable name="LottieAnimationView">
+        <attr name="lottieDrawable" format="reference" />
+    </declare-styleable>
+
     <!-- Drawable used to render a geometric shape, with a gradient or a solid color. -->
     <declare-styleable name="LottieDrawable">
         <attr name="android:width" />

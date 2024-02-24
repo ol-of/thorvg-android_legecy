@@ -1,6 +1,7 @@
 package com.thorvg.android.widget;
 
 import android.content.Context;
+import android.content.res.Resources;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
@@ -11,6 +12,11 @@ import androidx.annotation.Nullable;
 import com.thorvg.android.graphics.drawable.LottieDrawable;
 
 public class LottieAnimationView extends View {
+
+    private static final String[] STYLEABLE_LOTTIE_DRAWABLE_TYPE_ARRAY = {
+            "lottieDrawable"
+    };
+
     private LottieDrawable mLottieDrawable;
 
     public LottieAnimationView(Context context) {
@@ -28,6 +34,16 @@ public class LottieAnimationView extends View {
     public LottieAnimationView(Context context, @Nullable AttributeSet attrs, int defStyleAttr,
             int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
+
+        int resId = Resources.ID_NULL;
+        for (int i = 0; i < attrs.getAttributeCount(); i++) {
+            if (STYLEABLE_LOTTIE_DRAWABLE_TYPE_ARRAY[0].equals(attrs.getAttributeName(i))) {
+                resId = attrs.getAttributeResourceValue(i, resId);
+            }
+        }
+        if (resId != Resources.ID_NULL) {
+            setLottieDrawable(resId);
+        }
     }
 
     public void setLottieDrawable(@DrawableRes int resId) {
@@ -106,4 +122,5 @@ public class LottieAnimationView extends View {
         super.invalidateDrawable(drawable);
         invalidate();
     }
+
 }
