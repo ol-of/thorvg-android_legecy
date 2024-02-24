@@ -2,6 +2,7 @@ package com.thorvg.android.widget;
 
 import android.content.Context;
 import android.content.res.Resources;
+import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
@@ -10,14 +11,11 @@ import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.thorvg.android.graphics.drawable.LottieDrawable;
+import com.thorvg.android.R;
 
 public class LottieAnimationView extends View {
 
-    private static final String[] STYLEABLE_LOTTIE_DRAWABLE_TYPE_ARRAY = {
-            "lottieDrawable"
-    };
-
-    private LottieDrawable mLottieDrawable;
+    private LottieDrawable mDrawable;
 
     public LottieAnimationView(Context context) {
         this(context, null);
@@ -35,76 +33,72 @@ public class LottieAnimationView extends View {
             int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
 
-        int resId = Resources.ID_NULL;
-        for (int i = 0; i < attrs.getAttributeCount(); i++) {
-            if (STYLEABLE_LOTTIE_DRAWABLE_TYPE_ARRAY[0].equals(attrs.getAttributeName(i))) {
-                resId = attrs.getAttributeResourceValue(i, resId);
-            }
-        }
+        final TypedArray a = context.obtainStyledAttributes(
+                attrs, R.styleable.LottieAnimationView, defStyleAttr, defStyleRes);
+        int resId = a.getResourceId(R.styleable.LottieAnimationView_lottieDrawable,
+                Resources.ID_NULL);
         if (resId != Resources.ID_NULL) {
             setLottieDrawable(resId);
         }
+        a.recycle();
     }
 
     public void setLottieDrawable(@DrawableRes int resId) {
-        mLottieDrawable = LottieDrawable.create(getContext(), resId);
-        if (mLottieDrawable != null) {
-            mLottieDrawable.setCallback(this);
-        }
+        setLottieDrawable(LottieDrawable.create(getContext(), resId));
     }
 
     public void setLottieDrawable(LottieDrawable drawable) {
-        mLottieDrawable = drawable;
-        if (mLottieDrawable != null) {
-            mLottieDrawable.setCallback(this);
+        mDrawable = drawable;
+        if (mDrawable != null) {
+            mDrawable.setCallback(this);
         }
     }
 
     public void setSize(int width, int height) {
-        if (mLottieDrawable != null) {
-            mLottieDrawable.setSize(width, height);
+        if (mDrawable != null) {
+            mDrawable.setSize(width, height);
         }
     }
 
     public void startAnimation() {
-        if (mLottieDrawable != null) {
-            mLottieDrawable.start();
+        if (mDrawable != null) {
+            mDrawable.start();
         }
     }
 
     public void stopAnimation() {
-        if (mLottieDrawable != null) {
-            mLottieDrawable.stop();
+        if (mDrawable != null) {
+            mDrawable.stop();
         }
     }
 
     public void pauseAnimation() {
-        if (mLottieDrawable != null) {
-            mLottieDrawable.pause();
+        if (mDrawable != null) {
+            mDrawable.pause();
         }
     }
 
     public void resumeAnimation() {
-        if (mLottieDrawable != null) {
-            mLottieDrawable.resume();
+        if (mDrawable != null) {
+            mDrawable.resume();
         }
     }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        if (mLottieDrawable == null) {
+        if (mDrawable == null) {
             super.onMeasure(widthMeasureSpec, heightMeasureSpec);
             return;
         }
-        setMeasuredDimension(mLottieDrawable.getIntrinsicWidth(), mLottieDrawable.getIntrinsicHeight());
+        setMeasuredDimension(mDrawable.getIntrinsicWidth(), mDrawable.getIntrinsicHeight());
     }
 
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
-        if (mLottieDrawable != null) {
-            mLottieDrawable.release();
-            mLottieDrawable = null;
+        if (mDrawable != null) {
+            mDrawable.release();
+            mDrawable = null;
         }
     }
 
@@ -112,8 +106,8 @@ public class LottieAnimationView extends View {
     public void draw(Canvas canvas) {
         super.draw(canvas);
 
-        if (mLottieDrawable != null) {
-            mLottieDrawable.draw(canvas);
+        if (mDrawable != null) {
+            mDrawable.draw(canvas);
         }
     }
 
