@@ -87,33 +87,30 @@ public class LottieDrawable extends Drawable implements Animatable {
      * Public constants
      */
 
+    /**
+     * Repeat the animation indefinitely.
+     */
+    public static final int INFINITE = -1;
+    /**
+     * When the animation reaches the end and the repeat count is INFINTE_REPEAT
+     * or a positive value, the animation restarts from the beginning.
+     */
+    public static final int RESTART = 1;
+    /**
+     * When the animation reaches the end and the repeat count is INFINTE_REPEAT
+     * or a positive value, the animation plays backward (and then forward again).
+     */
+    public static final int REVERSE = 2;
+
     @RestrictTo(LIBRARY_GROUP_PREFIX)
     @IntDef({RESTART, REVERSE})
     @Retention(RetentionPolicy.SOURCE)
     public @interface RepeatMode {}
 
-    /**
-     * When the animation reaches the end and <code>repeatCount</code> is INFINITE
-     * or a positive value, the animation restarts from the beginning.
-     */
-    public static final int RESTART = 1;
-
-    /**
-     * When the animation reaches the end and <code>repeatCount</code> is INFINITE
-     * or a positive value, the animation reverses direction on every iteration.
-     */
-    public static final int REVERSE = 2;
-
-    /**
-     * This value used used with the {@link #setRepeatCount(int)} property to repeat
-     * the animation indefinitely.
-     */
-    public static final int INFINITE = -1;
-
     private LottieDrawableState mLottieState;
 
-    private LottieDrawable(Context context) {
-        mLottieState = new LottieDrawableState(context);
+    private LottieDrawable() {
+        mLottieState = new LottieDrawableState();
     }
 
     private LottieDrawable(@NonNull LottieDrawableState state) {
@@ -234,20 +231,20 @@ public class LottieDrawable extends Drawable implements Animatable {
         return mLottieState.mRepeatMode;
     }
 
-    public int getFirstFrame() {
-        return mLottieState.mFirstFrame;
-    }
-
     public void setFirstFrame(int frame) {
         mLottieState.setFirstFrame(frame);
     }
 
-    public int getLastFrame() {
-        return mLottieState.mLastFrame;
+    public int getFirstFrame() {
+        return mLottieState.mFirstFrame;
     }
 
     public void setLastFrame(int frame) {
         mLottieState.setLastFrame(frame);
+    }
+
+    public int getLastFrame() {
+        return mLottieState.mLastFrame;
     }
 
     /**
@@ -269,13 +266,13 @@ public class LottieDrawable extends Drawable implements Animatable {
     }
 
     public void setSize(int width, int height) {
+        if (width <= 0) {
+            throw new IllegalArgumentException("LottieDrawable requires width > 0");
+        } else if (height <= 0) {
+            throw new IllegalArgumentException("LottieDrawable requires height > 0");
+        }
         mWidth = width;
         mHeight = height;
-        if (mWidth <= 0) {
-            throw new IllegalArgumentException("<vector> tag requires width > 0");
-        } else if (mHeight <= 0) {
-            throw new IllegalArgumentException("<vector> tag requires height > 0");
-        }
         mLottieState.setLottieSize(mWidth, mHeight);
     }
 
@@ -335,7 +332,7 @@ public class LottieDrawable extends Drawable implements Animatable {
     @NonNull
     public static LottieDrawable createFromXmlInner(@NonNull Context context,
             @NonNull AttributeSet attrs) {
-        final LottieDrawable drawable = new LottieDrawable(context);
+        final LottieDrawable drawable = new LottieDrawable();
         drawable.inflate(context, attrs);
         return drawable;
     }
@@ -353,12 +350,12 @@ public class LottieDrawable extends Drawable implements Animatable {
         setSpeed(a.getFloat(R.styleable.LottieDrawable_speed, 1f));
 
         setRepeatMode(a.getInt(R.styleable.LottieDrawable_android_repeatMode, RESTART));
-        setRepeatCount(a.getInt(R.styleable.LottieDrawable_android_repeatCount, INFINITE));
+        setRepeatCount(a.getInt(R.styleable.LottieDrawable_android_repeatCount, 0));
 
         state.mAutoPlay = a.getBoolean(R.styleable.LottieDrawable_android_autoStart, true);
 
-        int defaultSize = (int) context.getResources().getDisplayMetrics().density
-                * UNDEFINED_SIZE_IN_DIP;
+        final int defaultSize = (int) (context.getResources().getDisplayMetrics().density
+                * UNDEFINED_SIZE_IN_DIP);
         state.mBaseWidth = a.getDimensionPixelOffset(R.styleable.LottieDrawable_android_width,
                 defaultSize);
         state.mBaseHeight = a.getDimensionPixelOffset(R.styleable.LottieDrawable_android_height,
@@ -370,10 +367,10 @@ public class LottieDrawable extends Drawable implements Animatable {
     }
 
     private static class LottieDrawableState extends ConstantState {
-        Lottie mLottie;
+        private Lottie mLottie;
 
-        float mBaseWidth = 0;
-        float mBaseHeight = 0;
+        private float mBaseWidth = 0;
+        private float mBaseHeight = 0;
 
         private int mWidth = 0;
         private int mHeight = 0;
@@ -383,22 +380,22 @@ public class LottieDrawable extends Drawable implements Animatable {
          * animation will start from the beginning on every new cycle. REVERSE means the animation
          * will reverse directions on each iteration.
          */
-        int mRepeatMode = RESTART;
+        private int mRepeatMode = RESTART;
 
-        int mRepeatCount = 1;
+        private int mRepeatCount;
 
-        float mSpeed = 1f;
+        private float mSpeed;
 
-        int mFirstFrame;
-        int mLastFrame;
+        private int mFirstFrame;
+        private int mLastFrame;
 
-        long mFrameInterval;
+        private long mFrameInterval;
 
-        int mFramesPerUpdate = 1;
+        private int mFramesPerUpdate = 1;
 
-        boolean mAutoPlay;
+        private boolean mAutoPlay;
 
-        float mAlpha = 1f;
+        private float mAlpha = 1f;
 
         LottieDrawableState(LottieDrawableState copy) {
             if (copy != null) {
@@ -431,36 +428,36 @@ public class LottieDrawable extends Drawable implements Animatable {
             }
         }
 
-        Bitmap getLottieBuffer(int frame) {
+        private Bitmap getLottieBuffer(int frame) {
             return mLottie.getBuffer(frame);
         }
 
-        void setRepeatMode(@RepeatMode int mode) {
+        private void setRepeatMode(@RepeatMode int mode) {
             mRepeatMode = mode;
             mFramesPerUpdate = mRepeatMode == RESTART ? 1 : -1;
         }
 
-        void setSpeed(@FloatRange(from = 0) float speed) {
+        private void setSpeed(@FloatRange(from = 0) float speed) {
             mSpeed = speed;
             updateFrameInterval();
         }
 
-        void setFirstFrame(int frame) {
+        private void setFirstFrame(int frame) {
             mFirstFrame = Math.min(frame, mLastFrame);
             updateFrameInterval();
         }
 
-        void setLastFrame(int frame) {
+        private void setLastFrame(int frame) {
             mLastFrame = Math.min(frame, mLottie.mFrameCount);
             updateFrameInterval();
         }
 
-        void updateFrameInterval() {
+        private void updateFrameInterval() {
             int frameCount = mLastFrame - mFirstFrame;
             mFrameInterval = (long) (mLottie.mDuration / frameCount / mSpeed);
         }
 
-        LottieDrawableState(@NonNull Context context) {
+        LottieDrawableState() {
         }
 
         @NonNull
@@ -493,17 +490,17 @@ public class LottieDrawable extends Drawable implements Animatable {
 
         Lottie(@NonNull Lottie copy) {
             mJsonContent = copy.mJsonContent;
-            mNativePtr = create(copy.mJsonContent);
+            mNativePtr = init(copy.mJsonContent);
             mFrameCount = copy.mFrameCount;
             mDuration = copy.mDuration;
         }
 
         Lottie(@NonNull Context context, @NonNull String filePath) {
             mJsonContent = loadJsonFromAsset(context, filePath);
-            mNativePtr = create(mJsonContent);
+            mNativePtr = init(mJsonContent);
         }
 
-        long create(@NonNull String jsonContent) {
+        long init(@NonNull String jsonContent) {
             final int[] outValues = new int[LOTTIE_INFO_COUNT];
             long nativePtr = LottieNative.nCreateLottie(jsonContent, jsonContent.length(), outValues);
             mFrameCount = outValues[LOTTIE_INFO_FRAME_COUNT];

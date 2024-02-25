@@ -17,6 +17,10 @@ public class LottieAnimationView extends View {
 
     private LottieDrawable mDrawable;
 
+    private int mResId = Resources.ID_NULL;
+
+    private boolean mOnAttached = false;
+
     public LottieAnimationView(Context context) {
         this(context, null);
     }
@@ -35,22 +39,28 @@ public class LottieAnimationView extends View {
 
         final TypedArray a = context.obtainStyledAttributes(
                 attrs, R.styleable.LottieAnimationView, defStyleAttr, defStyleRes);
-        int resId = a.getResourceId(R.styleable.LottieAnimationView_lottieDrawable,
-                Resources.ID_NULL);
-        if (resId != Resources.ID_NULL) {
-            setLottieDrawable(resId);
-        }
+        mResId = a.getResourceId(R.styleable.LottieAnimationView_lottieDrawable, mResId);
         a.recycle();
     }
 
-    public void setLottieDrawable(@DrawableRes int resId) {
-        setLottieDrawable(LottieDrawable.create(getContext(), resId));
+    public void setLottieDrawableResource(@DrawableRes int resId) {
+        if (mResId != resId) {
+            mResId = resId;
+
+            if (mDrawable != null) {
+                mDrawable.release();
+            }
+
+            createLottieDrawable();
+        }
     }
 
-    public void setLottieDrawable(LottieDrawable drawable) {
-        mDrawable = drawable;
-        if (mDrawable != null) {
-            mDrawable.setCallback(this);
+    private void createLottieDrawable() {
+        if (mOnAttached && mResId != Resources.ID_NULL && mDrawable == null) {
+            mDrawable = LottieDrawable.create(getContext(), mResId);
+            if (mDrawable != null) {
+                mDrawable.setCallback(this);
+            }
         }
     }
 
@@ -86,16 +96,28 @@ public class LottieAnimationView extends View {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        if (mDrawable == null) {
-            super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-            return;
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+
+        if (mDrawable != null) {
+            mDrawable.setSize(getMeasuredWidth(), getMeasuredHeight());
         }
-        setMeasuredDimension(mDrawable.getIntrinsicWidth(), mDrawable.getIntrinsicHeight());
+    }
+
+    @Override
+    protected void onAttachedToWindow() {
+        mOnAttached = true;
+
+        super.onAttachedToWindow();
+
+        createLottieDrawable();
     }
 
     @Override
     protected void onDetachedFromWindow() {
+        mOnAttached = false;
+
         super.onDetachedFromWindow();
+
         if (mDrawable != null) {
             mDrawable.release();
             mDrawable = null;
