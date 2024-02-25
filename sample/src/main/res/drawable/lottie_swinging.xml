@@ -4,6 +4,4 @@
     app:assetFilePath="swinging.json"
     android:width="100dp"
     android:height="100dp"
-    android:repeatMode="reverse"
-    android:repeatCount="5"
-    app:speed="1" />
+    android:repeatCount="5" />

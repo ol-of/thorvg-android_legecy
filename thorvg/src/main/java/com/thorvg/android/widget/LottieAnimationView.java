@@ -11,11 +11,13 @@ import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.thorvg.android.graphics.drawable.LottieDrawable;
+import com.thorvg.android.graphics.drawable.LottieDrawable.LottieAnimationListener;
 import com.thorvg.android.R;
 
 public class LottieAnimationView extends View {
 
     private LottieDrawable mDrawable;
+    private LottieAnimationListener mListener;
 
     private int mResId = Resources.ID_NULL;
 
@@ -60,6 +62,7 @@ public class LottieAnimationView extends View {
             mDrawable = LottieDrawable.create(getContext(), mResId);
             if (mDrawable != null) {
                 mDrawable.setCallback(this);
+                mDrawable.setAnimationListener(mListener);
             }
         }
     }
@@ -137,6 +140,10 @@ public class LottieAnimationView extends View {
     public void invalidateDrawable(@NonNull Drawable drawable) {
         super.invalidateDrawable(drawable);
         invalidate();
+    }
+
+    public void setAnimationListener(LottieAnimationListener listener) {
+        mListener = listener;
     }
 
 }

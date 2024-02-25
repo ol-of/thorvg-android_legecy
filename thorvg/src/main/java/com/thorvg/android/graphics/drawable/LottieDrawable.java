@@ -43,6 +43,13 @@ public class LottieDrawable extends Drawable implements Animatable {
      * Internal variables
      */
 
+    private LottieDrawableState mLottieState;
+
+    /**
+     * An animation listener to be notified when the animation starts, ends or repeats.
+     */
+    private LottieAnimationListener mListener;
+
     /**
      * Additional playing state to indicate whether an animator has been start()'d. There is
      * some lag between a call to start() and the first animation frame. We should still note
@@ -51,37 +58,36 @@ public class LottieDrawable extends Drawable implements Animatable {
      * Note that delayed animations are different: they are not started until their first
      * animation frame, which occurs after their delay elapses.
      */
-    private boolean mRunning = false;
-
-    private boolean mPaused;
-
-    private int mWidth = 0;
-
-    private int mHeight = 0;
+    private boolean mRunning;
 
     /**
-     * Backing variables
+     * Set to true when the animation ends.
      */
+    boolean mEnded = false;
 
-    private int mRemainingPlayCount;
+    /**
+     * Set to true when the animation starts.
+     */
+    boolean mStarted = false;
+
+    /**
+     * Indicates how many times the animation was repeated.
+     */
+    int mRepeated = 0;
 
     private int mFrame;
 
     /**
-     * Animation handler used to schedule updates for this animation.
+     * Animation handler used to schedule updates.
      */
     private final Handler mHandler = new Handler(Looper.getMainLooper());
 
-    private final Runnable mNextFrameRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if (mLottieState.mRepeatCount == INFINITE || mRemainingPlayCount > -1) {
-                invalidateSelf();
-            }
-        }
-    };
+    private final Runnable mNextFrameRunnable = () -> invalidateSelf();
 
+    // Temp variable, only for saving "new" operation at the draw() time.
     private Paint mTmpPaint = new Paint();
+
+    private boolean mMutated;
 
     /**
      * Public constants
@@ -107,8 +113,6 @@ public class LottieDrawable extends Drawable implements Animatable {
     @Retention(RetentionPolicy.SOURCE)
     public @interface RepeatMode {}
 
-    private LottieDrawableState mLottieState;
-
     private LottieDrawable() {
         mLottieState = new LottieDrawableState();
     }
@@ -121,38 +125,51 @@ public class LottieDrawable extends Drawable implements Animatable {
         mLottieState.releaseLottie();
     }
 
-//    @NonNull
-//    @Override
-//    public Drawable mutate() {
-//        if (!mMutated && super.mutate() == this) {
-//            mLottieState = new LottieDrawableState(mLottieState);
-//            mMutated = true;
-//        }
-//        return this;
-//    }
+    @NonNull
+    @Override
+    public Drawable mutate() {
+        if (!mMutated && super.mutate() == this) {
+            mLottieState = new LottieDrawableState(mLottieState);
+            mMutated = true;
+        }
+        return this;
+    }
 
     @Override
     public void draw(@NonNull Canvas canvas) {
-        if (mLottieState.valid() && (mLottieState.mAutoPlay || mRunning)) {
+        if (mLottieState.valid() && mRunning) {
+            if (!mStarted) {
+                mStarted = true;
+                dispatchAnimationStart();
+            }
+
             long startTime = System.nanoTime();
 
             canvas.drawBitmap(getFrame(mFrame), 0, 0, mTmpPaint);
 
-            // Increase frame count.
-            mFrame += mLottieState.mFramesPerUpdate;
-            if (mFrame > mLottieState.mLastFrame) {
-                mFrame = mLottieState.mFirstFrame;
-                mRemainingPlayCount--;
-            } else if (mFrame < mLottieState.mFirstFrame) {
-                mFrame = mLottieState.mLastFrame;
-                mRemainingPlayCount--;
+            if (mRepeated == mLottieState.mRepeatCount) {
+                if (!mEnded) {
+                    mEnded = true;
+                    dispatchAnimationEnd();
+                }
+            } else {
+                boolean resetFrame = false;
+                // Increase frame count.
+                mFrame += mLottieState.mFramesPerUpdate;
+                if (mFrame > mLottieState.mLastFrame) {
+                    mFrame = mLottieState.mFirstFrame;
+                    resetFrame = true;
+                } else if (mFrame < mLottieState.mFirstFrame) {
+                    mFrame = mLottieState.mLastFrame;
+                    resetFrame = true;
+                }
+                if (resetFrame) {
+                    mRepeated++;
+                    dispatchAnimationRepeat();
+                }
             }
 
             long endTime = System.nanoTime();
-
-            if (mPaused) {
-                return;
-            }
 
             mHandler.postDelayed(mNextFrameRunnable, mLottieState.mFrameInterval
                     - ((endTime - startTime) / 1000000));
@@ -197,7 +214,7 @@ public class LottieDrawable extends Drawable implements Animatable {
      */
     public void setRepeatCount(int count) {
         mLottieState.mRepeatCount = count;
-        mRemainingPlayCount = count;
+        mRepeated = 0;
     }
 
     /**
@@ -248,7 +265,7 @@ public class LottieDrawable extends Drawable implements Animatable {
     }
 
     /**
-     * Gets the length of the animation. The default duration is 300 milliseconds.
+     * Gets the length of the animation.
      *
      * @return The length of the animation, in milliseconds.
      */
@@ -271,9 +288,7 @@ public class LottieDrawable extends Drawable implements Animatable {
         } else if (height <= 0) {
             throw new IllegalArgumentException("LottieDrawable requires height > 0");
         }
-        mWidth = width;
-        mHeight = height;
-        mLottieState.setLottieSize(mWidth, mHeight);
+        mLottieState.setLottieSize(width, height);
     }
 
     @Override
@@ -284,8 +299,10 @@ public class LottieDrawable extends Drawable implements Animatable {
     @Override
     public void start() {
         mRunning = true;
+        mEnded = false;
+        mStarted = false;
+        mRepeated = 0;
         mFrame = mLottieState.mFirstFrame;
-        mRemainingPlayCount = mLottieState.mRepeatCount;
         invalidateSelf();
     }
 
@@ -296,13 +313,40 @@ public class LottieDrawable extends Drawable implements Animatable {
     }
 
     public void pause() {
-        mPaused = true;
+        mRunning = false;
         mHandler.removeCallbacks(mNextFrameRunnable);
     }
 
     public void resume() {
-        mPaused = false;
+        mRunning = true;
         invalidateSelf();
+    }
+
+    /**
+     * <p>Binds an lottie animation listener to this drawable. The lottie animation listener
+     * is notified of animation events such as the end of the animation or the repetition of
+     * the animation.</p>
+     *
+     * @param listener the lottie animation listener to be notified
+     */
+    public void setAnimationListener(LottieAnimationListener listener) {
+        mListener = listener;
+    }
+
+    void dispatchAnimationStart() {
+        if (mListener != null) {
+            mListener.onAnimationStart();
+        }
+    }
+    void dispatchAnimationRepeat() {
+        if (mListener != null) {
+            mListener.onAnimationRepeat();
+        }
+    }
+    void dispatchAnimationEnd() {
+        if (mListener != null) {
+            mListener.onAnimationEnd();
+        }
     }
 
     @Nullable
@@ -329,6 +373,13 @@ public class LottieDrawable extends Drawable implements Animatable {
         return null;
     }
 
+    /**
+     * Creates a new animation whose parameters come from the specified context and
+     * attributes set.
+     *
+     * @param context the application environment
+     * @param attrs the set of attributes holding the animation parameters
+     */
     @NonNull
     public static LottieDrawable createFromXmlInner(@NonNull Context context,
             @NonNull AttributeSet attrs) {
@@ -364,6 +415,7 @@ public class LottieDrawable extends Drawable implements Animatable {
         a.recycle();
 
         state.setLottieSize((int) state.mBaseWidth, (int) state.mBaseHeight);
+        if (state.mAutoPlay) start();
     }
 
     private static class LottieDrawableState extends ConstantState {
@@ -545,5 +597,26 @@ public class LottieDrawable extends Drawable implements Animatable {
             }
             return json;
         }
+    }
+
+    /**
+     * <p>An animation listener receives notifications from an animation.
+     * Notifications indicate animation related events, such as the end or the
+     * repetition of the animation.</p>
+     */
+    public interface LottieAnimationListener {
+        /**
+         * <p>Notifies the start of the lottie animation.</p>
+         */
+        void onAnimationStart();
+        /**
+         * <p>Notifies the end of the lottie animation. This callback is not invoked
+         * for animations with repeat count set to INFINITE.</p>
+         */
+        void onAnimationEnd();
+        /**
+         * <p>Notifies the repetition of the lottie animation.</p>
+         */
+        void onAnimationRepeat();
     }
 }
